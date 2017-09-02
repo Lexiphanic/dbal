@@ -27,6 +27,10 @@ use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Identifier;
 use Doctrine\DBAL\Schema\Constraint;
+use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Schema\TableDiff;
+use Doctrine\DBAL\Types;
+
 
 /**
  * The SqlitePlatform class describes the specifics and dialects of the SQLite
@@ -888,7 +892,7 @@ class SqlitePlatform extends AbstractPlatform
             if ( ! $columnDiff->fromColumn instanceof Column ||
                 ! $columnDiff->column instanceof Column ||
                 ! $columnDiff->column->getAutoincrement() ||
-                ! (string) $columnDiff->column->getType() === 'Integer'
+                ! $columnDiff->column->getType() instanceof Types\IntegerType
             ) {
                 continue;
             }
@@ -899,9 +903,9 @@ class SqlitePlatform extends AbstractPlatform
                 continue;
             }
 
-            $fromColumnType = (string) $columnDiff->fromColumn->getType();
+            $fromColumnType = $columnDiff->fromColumn->getType();
 
-            if ($fromColumnType === 'SmallInt' || $fromColumnType === 'BigInt') {
+            if ($fromColumnType instanceof Types\SmallIntType || $fromColumnType instanceof Types\BigIntType) {
                 unset($diff->changedColumns[$oldColumnName]);
             }
         }
@@ -929,14 +933,14 @@ class SqlitePlatform extends AbstractPlatform
             $type = (string) $field['type'];
             switch (true) {
                 case isset($field['columnDefinition']) || $field['autoincrement'] || $field['unique']:
-                case $type == 'DateTime' && $field['default'] == $this->getCurrentTimestampSQL():
-                case $type == 'Date' && $field['default'] == $this->getCurrentDateSQL():
-                case $type == 'Time' && $field['default'] == $this->getCurrentTimeSQL():
+                case $type instanceof Types\DateTimeType && $field['default'] == $this->getCurrentTimestampSQL():
+                case $type instanceof Types\DateType && $field['default'] == $this->getCurrentDateSQL():
+                case $type instanceof Types\TimeType && $field['default'] == $this->getCurrentTimeSQL():
                     return false;
             }
 
             $field['name'] = $column->getQuotedName($this);
-            if (strtolower($field['type']) == 'string' && $field['length'] === null) {
+            if ($type instanceof Types\StringType && $field['length'] === null) {
                 $field['length'] = 255;
             }
 
